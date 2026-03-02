@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Secure Vault</title>
+</head>
+<body>
+
+<h2>Encrypt</h2>
+<textarea id="enc-text" placeholder="Text to encrypt" rows="3" cols="40"></textarea><br><br>
+<input id="enc-pass" type="password" placeholder="Your secret passphrase" /><br><br>
+<button onclick="encryptText()">Encrypt</button>
+<p id="enc-result"></p>
+
+<hr>
+
+<h2>Decrypt</h2>
+<textarea id="dec-cipher" placeholder="Paste cipher text here" rows="4" cols="60"></textarea><br><br>
+<input id="dec-pass" type="password" placeholder="Passphrase" /><br><br>
+<button onclick="decryptEntry()">Decrypt</button>
+<p id="dec-result"></p>
+
+<script>
+  const API = "http://localhost:8000";
+
+  async function encryptText() {
+    const text = document.getElementById("enc-text").value;
+    const passphrase = document.getElementById("enc-pass").value;
+    if (!text || !passphrase) {
+      document.getElementById("enc-result").innerText = "Fill in all fields.";
+      return;
+    }
+    const res = await fetch(`${API}/encrypt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, passphrase })
+    });
+    const data = await res.json();
+    document.getElementById("enc-result").innerText = res.ok
+      ? `Cipher: ${data.cipher_text}`
+      : `Error: ${data.detail}`;
+  }
+
+  async function decryptEntry() {
+    const cipher_text = document.getElementById("dec-cipher").value.trim();
+    const passphrase = document.getElementById("dec-pass").value;
+    if (!cipher_text || !passphrase) {
+      document.getElementById("dec-result").innerText = "Enter cipher text and passphrase.";
+      return;
+    }
+    const res = await fetch(`${API}/decrypt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cipher_text, passphrase })
+    });
+    const data = await res.json();
+    document.getElementById("dec-result").innerText = res.ok
+      ? `Decrypted: ${data.text}`
+      : `Failed: ${data.detail}`;
+  }
+</script>
+
+</body>
+</html>

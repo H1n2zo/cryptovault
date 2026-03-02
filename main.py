@@ -5,8 +5,9 @@ import mysql.connector
 import os
 import base64
 import hashlib
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.backends import default_backend
 
 app = FastAPI()
 
@@ -33,16 +34,28 @@ def derive_key(passphrase: str) -> bytes:
 def encrypt_aes(text: str, passphrase: str) -> str:
     key = derive_key(passphrase)
     iv = os.urandom(16)
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    ct = cipher.encrypt(pad(text.encode(), AES.block_size))
+    
+    padder = padding.PKCS7(128).padder()
+    padded = padder.update(text.encode()) + padder.finalize()
+    
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+    ct = encryptor.update(padded) + encryptor.finalize()
+    
     return base64.b64encode(iv + ct).decode()
 
 def decrypt_aes(token: str, passphrase: str) -> str:
     key = derive_key(passphrase)
+    token = ''.join(token.split())  # strip whitespace
     raw = base64.b64decode(token)
     iv, ct = raw[:16], raw[16:]
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    return unpad(cipher.decrypt(ct), AES.block_size).decode()
+    
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    decryptor = cipher.decryptor()
+    padded = decryptor.update(ct) + decryptor.finalize()
+    
+    unpadder = padding.PKCS7(128).unpadder()
+    return (unpadder.update(padded) + unpadder.finalize()).decode()
 
 class EncryptRequest(BaseModel):
     text: str

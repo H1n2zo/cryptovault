@@ -42,7 +42,7 @@
   }
 
   async function decryptEntry() {
-    const cipher_text = document.getElementById("dec-cipher").value.trim();
+    const cipher_text = document.getElementById("dec-cipher").value.trim().replace(/\s+/g, '');
     const passphrase = document.getElementById("dec-pass").value;
     if (!cipher_text || !passphrase) {
       document.getElementById("dec-result").innerText = "Enter cipher text and passphrase.";
